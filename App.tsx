@@ -6,6 +6,13 @@ import { HeroOdometer } from './components/HeroOdometer.tsx';
 import { ThreatAlertBox } from './components/ThreatAlertBox.tsx';
 import { ComplianceBox } from './components/ComplianceBox.tsx';
 
+declare global {
+  interface Window {
+    loadCloudState?: () => Promise<any>;
+    saveCloudState?: (state: any) => Promise<any>;
+  }
+}
+
 const App: React.FC = () => {
   // --- Core State ---
   const [totalOdometer, setTotalOdometer] = useState<number>(22845);
@@ -13,8 +20,8 @@ const App: React.FC = () => {
   const [licenseExpiry, setLicenseExpiry] = useState('2035-05-21');
   const [taxExpiry, setTaxExpiry] = useState('2026-07-30');
   const [history, setHistory] = useState<MileageEntry[]>([
-    { date: '2025-12-31', value: 22797 }, 
-    { date: '2026-01-15', value: 22845 }, 
+    { date: '2025-12-31', value: 22797 },
+    { date: '2026-01-15', value: 22845 },
   ]);
 
   // --- UI & Undo State ---
@@ -23,8 +30,9 @@ const App: React.FC = () => {
   const [newOdoInput, setNewOdoInput] = useState('22845');
   const [newDateInput, setNewDateInput] = useState(new Date().toISOString().split('T')[0]);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  
+
   const stateRef = useRef<MaintenanceState>({ totalOdometer, items, history, licenseExpiry, taxExpiry });
+  const hasLoadedInitialState = useRef(false);
 
   useEffect(() => {
     stateRef.current = { totalOdometer, items, history, licenseExpiry, taxExpiry };
@@ -32,24 +40,68 @@ const App: React.FC = () => {
 
   // --- Persistence ---
   useEffect(() => {
-    const saved = localStorage.getItem('moto_state');
-    if (saved) {
+    const loadInitialState = async () => {
       try {
-        const parsed = JSON.parse(saved) as MaintenanceState;
-        setTotalOdometer(parsed.totalOdometer);
-        setItems(parsed.items);
-        setHistory(parsed.history);
-        setLicenseExpiry(parsed.licenseExpiry);
-        setTaxExpiry(parsed.taxExpiry);
-      } catch (e) {
-        console.error("Failed to load local state", e);
+        let loadedState: MaintenanceState | null = null;
+
+        if (typeof window.loadCloudState === 'function') {
+          try {
+            const cloud = await window.loadCloudState();
+            if (cloud && Object.keys(cloud).length > 0) {
+              loadedState = cloud as MaintenanceState;
+              localStorage.setItem('moto_state', JSON.stringify(cloud));
+            }
+          } catch (e) {
+            console.error('Failed to load cloud state', e);
+          }
+        }
+
+        if (!loadedState) {
+          const saved = localStorage.getItem('moto_state');
+          if (saved) {
+            try {
+              loadedState = JSON.parse(saved) as MaintenanceState;
+            } catch (e) {
+              console.error('Failed to load local state', e);
+            }
+          }
+        }
+
+        if (loadedState) {
+          setTotalOdometer(loadedState.totalOdometer);
+          setItems(loadedState.items);
+          setHistory(loadedState.history);
+          setLicenseExpiry(loadedState.licenseExpiry);
+          setTaxExpiry(loadedState.taxExpiry);
+        }
+      } finally {
+        hasLoadedInitialState.current = true;
       }
-    }
+    };
+
+    loadInitialState();
   }, []);
 
   useEffect(() => {
+    if (!hasLoadedInitialState.current) return;
+
     const state = { totalOdometer, items, history, licenseExpiry, taxExpiry };
     localStorage.setItem('moto_state', JSON.stringify(state));
+  }, [totalOdometer, items, history, licenseExpiry, taxExpiry]);
+
+  useEffect(() => {
+    if (!hasLoadedInitialState.current) return;
+    if (typeof window.saveCloudState !== 'function') return;
+
+    const state = { totalOdometer, items, history, licenseExpiry, taxExpiry };
+
+    const timeout = setTimeout(() => {
+      window.saveCloudState?.(state).catch((e) => {
+        console.error('Cloud sync save failed', e);
+      });
+    }, 500);
+
+    return () => clearTimeout(timeout);
   }, [totalOdometer, items, history, licenseExpiry, taxExpiry]);
 
   // --- Undo Logic ---
@@ -60,7 +112,7 @@ const App: React.FC = () => {
   const handleUndo = () => {
     if (snapshots.length === 0) return;
     const [lastState, ...remainingSnapshots] = snapshots;
-    
+
     setTotalOdometer(lastState.totalOdometer);
     setItems(lastState.items);
     setHistory(lastState.history);
@@ -108,10 +160,10 @@ const App: React.FC = () => {
               Local Storage Mode
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {snapshots.length > 0 && (
-              <button 
+              <button
                 onClick={handleUndo}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-all active:scale-95 group"
                 title="Undo last action"
@@ -122,7 +174,7 @@ const App: React.FC = () => {
                 <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline">Undo</span>
               </button>
             )}
-            
+
             <div className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-600">
               <span className="text-[9px] font-black uppercase tracking-widest">Offline Secure</span>
             </div>
@@ -132,7 +184,7 @@ const App: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-6 mt-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-          <HeroOdometer 
+          <HeroOdometer
             totalOdometer={totalOdometer}
             isEditing={isUpdatingOdo}
             editValue={newOdoInput}
@@ -154,7 +206,7 @@ const App: React.FC = () => {
           }} />
         </div>
 
-        <MaintenanceMatrix 
+        <MaintenanceMatrix
           items={items}
           totalOdometer={totalOdometer}
           onReset={handleResetItem}
