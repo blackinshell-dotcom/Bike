@@ -1,4 +1,4 @@
-export async function loadCloudState() {
+window.loadCloudState = async function () {
   const response = await fetch("/api/state", {
     method: "GET",
     headers: {
@@ -13,9 +13,9 @@ export async function loadCloudState() {
 
   const result = await response.json();
   return result?.data ?? {};
-}
+};
 
-export async function saveCloudState(state) {
+window.saveCloudState = async function (state) {
   const response = await fetch("/api/state", {
     method: "POST",
     headers: {
@@ -29,4 +29,4 @@ export async function saveCloudState(state) {
   }
 
   return await response.json();
-}
+};
