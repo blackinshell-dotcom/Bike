@@ -17,18 +17,17 @@
             font-family: 'Inter', sans-serif;
             background-color: #000000;
             color: #f8fafc;
-            word-spacing: 0.08em; /* Slightly increased space between words for improved technical readability */
+            word-spacing: 0.08em;
         }
         .mono {
             font-family: 'JetBrains Mono', monospace;
-            word-spacing: normal; /* Monospace usually looks better with standard word spacing */
+            word-spacing: normal;
         }
         .bg-grid {
             background-image: linear-gradient(to right, #111 1px, transparent 1px),
                               linear-gradient(to bottom, #111 1px, transparent 1px);
             background-size: 40px 40px;
         }
-        /* Remove number input arrows */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -39,11 +38,11 @@
         }
 
         @keyframes glow-red-text {
-          0%, 100% { 
+          0%, 100% {
             text-shadow: 0 0 5px rgba(220, 38, 38, 0);
             filter: drop-shadow(0 0 0px rgba(220, 38, 38, 0));
           }
-          50% { 
+          50% {
             text-shadow: 0 0 15px rgba(220, 38, 38, 0.8), 0 0 25px rgba(220, 38, 38, 0.4);
             filter: drop-shadow(0 0 10px rgba(220, 38, 38, 0.5));
           }
@@ -52,20 +51,21 @@
           animation: glow-red-text 3s ease-in-out infinite;
         }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.4",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+        "react/": "https://esm.sh/react@^19.2.4/",
+        "@google/genai": "https://esm.sh/@google/genai@^1.41.0"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-grid">
     <div id="root"></div>
-<script type="module" src="/index.tsx"></script>
+    <script src="/sync.js"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
